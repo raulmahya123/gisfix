@@ -1,61 +1,106 @@
-// Create a map
-const map = L.map('map').setView([-6.906227014340985, 107.66378289976814], 12);
+const map = new ol.Map({
+    target: 'map',
+    view: new ol.View({
+        center: ol.proj.fromLonLat([107.66378289976814, -6.906227014340985]),
+        zoom: 8
+    })
+});
 
-// Add a Tile Layer (use OpenStreetMap)
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-}).addTo(map);
+const tileLayer = new ol.layer.Tile({
+    source: new ol.source.OSM()
+});
+map.addLayer(tileLayer);
 
-// Function to add GeoJSON data to the map and table
 function addGeoJSONToMapAndTable(geoJSONUrl, map, table) {
-    $.getJSON(geoJSONUrl, function (data) {
-        // Add GeoJSON data as a layer to the map
-        L.geoJSON(data).addTo(map);
+    fetch(geoJSONUrl)
+        .then(response => response.json())
+        .then(data => {
+            const vectorSource = new ol.source.Vector({
+                features: (new ol.format.GeoJSON()).readFeatures(data)
+            });
+            const vectorLayer = new ol.layer.Vector({
+                source: vectorSource
+            });
+            map.addLayer(vectorLayer);
 
-        // Populate the table with GeoJSON data
-        let rowNum = 1; // Initialize a row number counter
+            let rowNum = 1;
 
-        data.features.forEach(feature => {
-            const row = table.insertRow();
-            const numCell = row.insertCell(0); // Add a cell for the row number
-            const nameCell = row.insertCell(1);
-            const desaCell = row.insertCell(2);
-            const coordCell = row.insertCell(3); // Cell for coordinates
-            const typeCell = row.insertCell(4); // Add a cell for the type
-            numCell.innerHTML = rowNum; // Populate the row number
-            nameCell.innerHTML = feature.properties.name;
-            desaCell.innerHTML = feature.properties.desa;
+            const tableBody = document.getElementById('geojson-table');
 
-            // Access the GeoJSON coordinates
-            const coordinates = feature.geometry.coordinates;
-            let coordinateString = "";
+            data.features.forEach(feature => {
+                const row = tableBody.insertRow();
+                const numCell = row.insertCell(0);
+                const nameCell = row.insertCell(1);
+                const desaCell = row.insertCell(2);
+                const coordCell = row.insertCell(3);
+                const typeCell = row.insertCell(4);
+                numCell.innerHTML = rowNum;
+                nameCell.innerHTML = feature.properties.name;
+                desaCell.innerHTML = feature.properties.desa;
 
-            // Check the feature type
-            if (feature.geometry.type === "Point") {
-                const lat = coordinates[1];
-                const long = coordinates[0];
-                coordinateString = `${lat}, ${long}`;
-            } else if (feature.geometry.type === "LineString" || feature.geometry.type === "Polygon") {
-                // Process LineString or Polygon coordinates (as in the previous code)
+                const coordinates = feature.geometry.coordinates;
+                let coordinateString = "";
+
+                if (feature.geometry.type === "Point") {
+                    const lat = coordinates[1];
+                    const long = coordinates[0];
+                    coordinateString = `${lat}, ${long}`;
+
+                    // Extract the icon URL from GeoJSON properties
+                    const iconUrl = feature.properties.icon; // Replace 'icon' with the actual property name
+                    const iconUrl2 = feature.properties.icon; 
+                    const iconUrl3 = feature.properties.icon;
+                    // Replace 'icon' with the actual property name
+                    // Add a marker to the map for Point features
+                    const marker = new ol.Feature({
+                        geometry: new ol.geom.Point(ol.proj.fromLonLat([long, lat]))
+                    });
+
+                    if (iconUrl) {
+                        const markerStyle = new ol.style.Style({
+                            image: new ol.style.Icon({
+                                src: iconUrl,
+                                scale: 0.1 // Adjust the scale as needed
+                            }),
+                            imagee: new ol.style.Icon({
+                                src: iconUrl2,
+                                scale: 0.1 // Adjust the scale as needed
+                            }),
+                            imageee: new ol.style.Icon({
+                                src: iconUrl3,
+                                scale: 0.1 // Adjust the scale as needed
+                            })
+                        });
+                        marker.setStyle(markerStyle);
+                    }
+
+                    vectorSource.addFeature(marker);
+                } else if (feature.geometry.type === "LineString" || feature.geometry.type === "Polygon") {
+                    // Create a feature for LineString and Polygon
+                    const geometry = new ol.geom[feature.geometry.type](coordinates);
+                    const featureGeom = new ol.Feature({
+                        geometry: geometry
+                    });
+                    vectorSource.addFeature(featureGeom);
+                }
+
                 coordinates.forEach(coordinate => {
                     const lat = coordinate[1];
                     const long = coordinate[0];
                     coordinateString += `${lat}, ${long}<br>`;
                 });
-            }
 
-            coordCell.innerHTML = coordinateString; // Populate the coordinate cell
-            typeCell.innerHTML = feature.geometry.type;
-            rowNum++;
+                coordCell.innerHTML = coordinateString;
+                typeCell.innerHTML = feature.geometry.type;
+                rowNum++;
+            });
+        })
+        .catch(error => {
+            console.error('Error fetching GeoJSON:', error);
         });
-    });
 }
 
-// Call the function for LineString GeoJSON using the raw URL
+// Call the function for each GeoJSON URL
 addGeoJSONToMapAndTable('https://raw.githubusercontent.com/raulmahya123/gisfix/master/TUGAS1/1214053-RAULMAHYA/geojsonLinestring.json', map, document.querySelector('table'));
-
-// Call the function for Polygon GeoJSON
 addGeoJSONToMapAndTable('https://raw.githubusercontent.com/raulmahya123/gisfix/master/TUGAS1/1214053-RAULMAHYA/geojsonPloygon.json', map, document.querySelector('table'));
-
-// Call the function for Point GeoJSON
 addGeoJSONToMapAndTable('https://raw.githubusercontent.com/raulmahya123/gisfix/master/TUGAS1/1214053-RAULMAHYA/goejsondrawPoint.json', map, document.querySelector('table'));
