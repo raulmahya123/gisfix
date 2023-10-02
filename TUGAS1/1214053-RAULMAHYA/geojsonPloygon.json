@@ -5,7 +5,10 @@
     "type": "Feature",
     "properties": {
       "name":"Antapani",
-      "desa": "Antapani Tengah"
+      "desa": "Antapani Tengah",
+      "icon": "icon-url-1.png",
+      "icon2": "icon-url-2.png",
+      "icon3": "icon-url-3.png"
     },
     "geometry": {
       "coordinates": [
